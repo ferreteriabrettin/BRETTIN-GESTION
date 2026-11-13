@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brettin Gestión</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{margin:0;font-family:Arial;background:#f1f4f9;color:#172b4d}
+header{background:#123c70;color:white;padding:22px}
+header h1{margin:0}
+main{max-width:950px;margin:25px auto;padding:15px}
+.card{background:white;padding:22px;border-radius:12px;margin-bottom:18px;box-shadow:0 2px 8px #0001}
+input,button{padding:12px;margin:6px 0;border-radius:7px;border:1px solid #ccc;width:100%;box-sizing:border-box}
+button{background:#1455a0;color:white;border:0;font-weight:bold;cursor:pointer}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+nav button{width:auto}
+table{width:100%;border-collapse:collapse}
+td,th{padding:10px;border-bottom:1px solid #ddd;text-align:left}
+#app{display:none}
+</style>
+</head>
+<body>
+<header>
+<h1>FERRETERÍA BRETTIN</h1>
+<p>Sistema de gestión comercial</p>
+</header>
+
+<main>
+<section id="login" class="card">
+<h2>Ingreso al sistema</h2>
+<input id="email" type="email" placeholder="Correo electrónico">
+<input id="password" type="password" placeholder="Contraseña">
+<button onclick="entrar()">INGRESAR</button>
+<p id="mensaje"></p>
+</section>
+
+<section id="app">
+<div class="card">
+<h2>Panel principal</h2>
+<p id="usuario"></p>
+<nav>
+<button onclick="mostrar('inicio')">Inicio</button>
+<button onclick="mostrar('inventario')">Inventario</button>
+<button onclick="mostrar('ventas')">Ventas</button>
+<button onclick="mostrar('clientes')">Clientes</button>
+<button onclick="mostrar('caja')">Caja</button>
+<button onclick="salir()">Cerrar sesión</button>
+</nav>
+</div>
+
+<div id="inicio" class="card">
+<h2>Bienvenido a Brettin Gestión</h2>
+<p>Administración de Ferretería Brettin.</p>
+<p>Desde aquí organizaremos las ventas, el inventario y la caja.</p>
+</div>
+
+<div id="inventario" class="card" style="display:none">
+<h2>Inventario</h2>
+<button onclick="cargarProductos()">ACTUALIZAR INVENTARIO</button>
+<div id="productos">Presioná actualizar para consultar los productos.</div>
+</div>
+
+<div id="ventas" class="card" style="display:none">
+<h2>Ventas</h2>
+<p>Módulo en preparación.</p>
+</div>
+
+<div id="clientes" class="card" style="display:none">
+<h2>Clientes y cuentas corrientes</h2>
+<p>Módulo en preparación.</p>
+</div>
+
+<div id="caja" class="card" style="display:none">
+<h2>Caja</h2>
+<p>Módulo en preparación.</p>
+</div>
+</section>
+</main>
+
+<script>
+const URL = "https://metqbvbsvmahtuflnliz.supabase.co";
+const KEY = "sb_publishable_a1g1Yqod9mBQJLBUEcC_GQ_FboM7Io6";
+const db = window.supabase.createClient(URL,KEY);
+
+async function entrar(){
+ const email=document.getElementById("email").value.trim();
+ const password=document.getElementById("password").value;
+ const mensaje=document.getElementById("mensaje");
+ mensaje.textContent="Verificando acceso...";
+ const {data,error}=await db.auth.signInWithPassword({email,password});
+ if(error){mensaje.textContent="Error: "+error.message;return;}
+ document.getElementById("login").style.display="none";
+ document.getElementById("app").style.display="block";
+ document.getElementById("usuario").textContent="Sesión iniciada: "+data.user.email;
+}
+
+async function salir(){
+ await db.auth.signOut();
+ location.reload();
+}
+
+function mostrar(id){
+ ["inicio","inventario","ventas","clientes","caja"].forEach(x=>{
+ document.getElementById(x).style.display=x===id?"block":"none";
+ });
+}
+
+async function cargarProductos(){
+ const caja=document.getElementById("productos");
+ caja.textContent="Cargando...";
+ const {data,error}=await db.from("products_public")
+ .select("barcode,name,stock,sale_price")
+ .order("name");
+ if(error){caja.textContent="No se pudo cargar: "+error.message;return;}
+ if(!data.length){caja.textContent="No hay productos para mostrar.";return;}
+ let html="<table><tr><th>Código</th><th>Producto</th><th>Stock</th><th>Precio</th></tr>";
+ data.forEach(p=>{
+ html+=`<tr><td>${p.barcode??""}</td><td>${p.name??""}</td><td>${p.stock??0}</td><td>$${p.sale_price??0}</td></tr>`;
+ });
+ caja.innerHTML=html+"</table>";
+}
+
+db.auth.getSession().then(({data})=>{
+ if(data.session){
+ document.getElementById("login").style.display="none";
+ document.getElementById("app").style.display="block";
+ document.getElementById("usuario").textContent="Sesión iniciada: "+data.session.user.email;
+ }
+});
+</script>
+</body>
+</html>
